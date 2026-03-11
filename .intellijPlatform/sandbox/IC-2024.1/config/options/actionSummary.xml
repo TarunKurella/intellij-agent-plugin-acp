@@ -1,0 +1,46 @@
+<application>
+  <component name="ActionsLocalSummary">
+    <e n="CWMHostShowPopupAction">
+      <i c="1" l="1773247246666" />
+    </e>
+    <e n="CopyAbsolutePath">
+      <i c="1" l="1773242363864" />
+    </e>
+    <e n="CopyReferencePopupGroup">
+      <i c="1" l="1773242361807" />
+    </e>
+    <e n="EditorBackSpace">
+      <i c="25" l="1773247441380" />
+    </e>
+    <e n="EditorCopy">
+      <i c="2" l="1773246417318" />
+    </e>
+    <e n="EditorPaste">
+      <i c="1" l="1773242365842" />
+    </e>
+    <e n="RevealIn">
+      <i c="2" l="1773247484817" />
+    </e>
+    <e n="SearchEverywhere">
+      <i c="1" l="1773243490671" />
+    </e>
+    <e n="WelcomeScreen.CreateNewProject">
+      <i c="1" l="1773240436833" />
+    </e>
+    <e n="WelcomeScreen.OpenProject">
+      <i c="1" l="1773240419415" />
+    </e>
+    <e n="com.intellij.codeInsight.documentation.render.DocRenderer$ToggleRenderingAction">
+      <i c="2" l="1773240524415" />
+    </e>
+    <e n="com.intellij.openapi.fileEditor.impl.tabActions.CloseTab">
+      <i c="1" l="1773247459341" />
+    </e>
+    <e n="com.intellij.toolWindow.ToolWindowHeader$HideAction">
+      <i c="1" l="1773247155553" />
+    </e>
+    <e n="com.intellij.toolWindow.ToolWindowHeader$ShowOptionsAction">
+      <i c="1" l="1773247361133" />
+    </e>
+  </component>
+</application>

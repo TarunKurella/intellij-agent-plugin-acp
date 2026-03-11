@@ -1,0 +1,20 @@
+# IntelliJ / Gradle
+.idea/
+.gradle/
+build/
+out/
+
+# Kotlin/Java
+*.iml
+
+# Python sidecar
+sidecar/.venv/
+sidecar/__pycache__/
+sidecar/.pytest_cache/
+*.pyc
+
+# OS
+.DS_Store
+
+# Logs
+*.log
