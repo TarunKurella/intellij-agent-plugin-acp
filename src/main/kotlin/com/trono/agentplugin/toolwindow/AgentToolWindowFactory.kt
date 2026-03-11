@@ -8,7 +8,7 @@ import javax.swing.JPanel
 
 class AgentToolWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val panel = AgentToolWindowPanel(project)
+        val panel = AgentWebViewPanel(project)
         val content = ContentFactory.getInstance().createContent(panel, "Agent", false)
         toolWindow.contentManager.addContent(content)
     }

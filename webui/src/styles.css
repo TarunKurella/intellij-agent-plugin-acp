@@ -1,0 +1,154 @@
+:root {
+  --bg: #0e1013;
+  --panel: #14181e;
+  --panel-2: #181d24;
+  --text: #e6edf3;
+  --muted: #8b98a7;
+  --line: #2d3742;
+  --accent: #57d6ff;
+  --ok: #7cff8f;
+  --warn: #ffd166;
+  --err: #ff5c7a;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; background: var(--bg); }
+body { font-family: "JetBrains Mono", "IBM Plex Mono", Menlo, monospace; color: var(--text); }
+
+.app {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  height: 100%;
+}
+
+.rail {
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, #0f1318 0%, #0d1014 100%);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rail-title {
+  font-size: 11px;
+  letter-spacing: .15em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.rail-item {
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+}
+.rail-item.active {
+  border-color: #3f4c59;
+  box-shadow: inset 0 0 0 1px #27313d;
+  background: #121821;
+}
+.rail-meta {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.main {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 0;
+}
+.head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 18px 12px;
+  background: radial-gradient(900px 160px at 0% -20%, #183347 0%, transparent 60%);
+}
+.head h1 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: .18em;
+}
+.head p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.badge {
+  border: 1px solid #2e6a7a;
+  color: #a6f0ff;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.timeline {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background:
+    radial-gradient(1200px 380px at 100% -20%, rgba(87,214,255,.08), transparent 60%),
+    var(--bg);
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 12px;
+  max-width: 900px;
+}
+.card.user { border-left-color: var(--accent); background: #111a22; margin-left: auto; }
+.card.agent { border-left-color: var(--ok); background: #131b14; }
+.card.state { border-left-color: var(--warn); background: var(--panel-2); }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.chip {
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+.time { color: var(--muted); font-size: 11px; }
+.card p { margin: 8px 0 2px; line-height: 1.5; white-space: pre-wrap; }
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 12px 14px;
+  background: #101419;
+}
+.composer input {
+  width: 100%;
+  border: 1px solid #33404d;
+  border-radius: 10px;
+  padding: 12px;
+  background: #0d1217;
+  color: var(--text);
+  font: inherit;
+}
+.composer button {
+  border: 1px solid #2f6778;
+  border-radius: 10px;
+  padding: 0 16px;
+  background: linear-gradient(180deg, #153241, #0f2732);
+  color: #cbf5ff;
+  font: inherit;
+  cursor: pointer;
+}
+.composer button:disabled { opacity: .4; cursor: not-allowed; }

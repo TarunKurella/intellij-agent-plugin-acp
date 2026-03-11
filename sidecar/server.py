@@ -431,16 +431,43 @@ class SidecarServer:
                 return {"applied": False, "backupId": None, "reason": "Target file not found"}
 
             original = file_path.read_text(errors="ignore")
-            if str(old_text) not in original:
+
+            def _apply_with_fallback(src: str, old_s: str, new_s: str):
+                # 1) exact
+                if old_s in src:
+                    return src.replace(old_s, new_s, 1), "exact"
+
+                # 2) normalized whitespace fallback
+                import re
+                old_norm = re.sub(r"\s+", " ", old_s).strip()
+                if old_norm:
+                    # Try to locate a similarly normalized window.
+                    lines = src.splitlines(keepends=True)
+                    for i in range(len(lines)):
+                        for j in range(i + 1, min(len(lines), i + 60) + 1):
+                            chunk = "".join(lines[i:j])
+                            chunk_norm = re.sub(r"\s+", " ", chunk).strip()
+                            if chunk_norm == old_norm:
+                                replaced = src.replace(chunk, new_s, 1)
+                                return replaced, "normalized"
+
+                # 3) no safe match
+                return None, None
+
+            applied_res, mode = _apply_with_fallback(original, str(old_text), str(new_text))
+            if applied_res is None:
                 del self.patch_previews[preview_id]
-                return {"applied": False, "backupId": None, "reason": "oldText not found in current file"}
+                return {
+                    "applied": False,
+                    "backupId": None,
+                    "reason": "oldText not found in current file (exact/normalized)",
+                }
 
             backup_id = f"bk_{uuid.uuid4().hex[:8]}"
             self.patch_backups[backup_id] = {"path": str(file_path), "content": original}
-            updated = original.replace(str(old_text), str(new_text), 1)
-            file_path.write_text(updated)
+            file_path.write_text(applied_res)
             del self.patch_previews[preview_id]
-            return {"applied": True, "backupId": backup_id}
+            return {"applied": True, "backupId": backup_id, "applyMode": mode}
 
         if method == "ide.patch_rollback":
             backup_id = params.get("backupId")

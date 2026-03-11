@@ -17,5 +17,13 @@ sidecar/.pytest_cache/
 # OS
 .DS_Store
 
+# Kotlin/Gradle caches
+.kotlin/
+
+# Node (webui)
+node_modules/
+webui/node_modules/
+webui/dist/
+
 # Logs
 *.log
