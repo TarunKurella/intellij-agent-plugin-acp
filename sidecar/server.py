@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import websockets
 
@@ -47,6 +47,16 @@ class SidecarServer:
         # Default to live Claude mode unless explicitly disabled.
         self.use_claude_live = os.getenv("INTELLI_AGENT_USE_CLAUDE", "1") != "0"
         self.session_sockets: Dict[str, Any] = {}
+
+    def _session_has_active_runs(self, session_id: str) -> bool:
+        return any(active_session_id == session_id for active_session_id in self.active_runs.values())
+
+    def _set_session_status(self, session_id: str, status: Optional[str] = None) -> None:
+        session = self.sessions.get(session_id)
+        if session is None:
+            return
+        session.status = status if status is not None else ("running" if self._session_has_active_runs(session_id) else "idle")
+        session.updated_at = datetime.now(timezone.utc).isoformat()
 
     async def handle(self, ws):
         async for raw in ws:
@@ -151,6 +161,24 @@ class SidecarServer:
             self.sessions[sid] = s
             return {"sessionId": sid, "status": s.status}
 
+        if method == "session.delete":
+            session_id = params["sessionId"]
+            if session_id not in self.sessions:
+                raise ValueError("Session not found")
+            for run_id, active_session_id in list(self.active_runs.items()):
+                if active_session_id == session_id:
+                    del self.active_runs[run_id]
+            for preview_id, preview in list(self.patch_previews.items()):
+                if str(preview.get("sessionId", "")) == session_id:
+                    del self.patch_previews[preview_id]
+            for backup_id, backup in list(self.patch_backups.items()):
+                if str(backup.get("sessionId", "")) == session_id:
+                    del self.patch_backups[backup_id]
+            self.last_preview_by_session.pop(session_id, None)
+            self.session_sockets.pop(session_id, None)
+            del self.sessions[session_id]
+            return {"deleted": True}
+
         if method == "session.list":
             return {
                 "sessions": [
@@ -169,9 +197,8 @@ class SidecarServer:
             if session_id not in self.sessions:
                 raise ValueError("Session not found")
             run_id = f"r_{uuid.uuid4().hex[:6]}"
-            self.sessions[session_id].status = "running"
-            self.sessions[session_id].updated_at = datetime.now(timezone.utc).isoformat()
             self.active_runs[run_id] = session_id
+            self._set_session_status(session_id, "running")
 
             if ws is not None:
                 self.session_sockets[session_id] = ws
@@ -188,9 +215,11 @@ class SidecarServer:
             run_id = params.get("runId")
             if run_id and run_id in self.active_runs:
                 del self.active_runs[run_id]
-            if session_id in self.sessions:
-                self.sessions[session_id].status = "idle"
-                self.sessions[session_id].updated_at = datetime.now(timezone.utc).isoformat()
+            elif session_id in self.sessions:
+                for active_run_id, active_session_id in list(self.active_runs.items()):
+                    if active_session_id == session_id:
+                        del self.active_runs[active_run_id]
+            self._set_session_status(session_id)
             return {"cancelled": True}
 
         if method == "session.setModel":
@@ -464,7 +493,7 @@ class SidecarServer:
                 }
 
             backup_id = f"bk_{uuid.uuid4().hex[:8]}"
-            self.patch_backups[backup_id] = {"path": str(file_path), "content": original}
+            self.patch_backups[backup_id] = {"path": str(file_path), "content": original, "sessionId": str(session_id or "")}
             file_path.write_text(applied_res)
             del self.patch_previews[preview_id]
             return {"applied": True, "backupId": backup_id, "applyMode": mode}
@@ -753,13 +782,12 @@ class SidecarServer:
                 return
 
             await self._emit_event(ws, "prompt.done", session_id, run_id, {"stopReason": "end_turn"})
-            self.sessions[session_id].status = "idle"
-            self.sessions[session_id].updated_at = datetime.now(timezone.utc).isoformat()
             self.active_runs.pop(run_id, None)
+            self._set_session_status(session_id)
         except Exception as e:
             await self._emit_event(ws, "prompt.error", session_id, run_id, {"message": f"claude stream failure: {e}"})
-            self.sessions[session_id].status = "error"
             self.active_runs.pop(run_id, None)
+            self._set_session_status(session_id, "error")
 
     async def _stream_command(self, ws, session_id: str, run_id: str, exec_id: str, command: str, cwd: str):
         try:
@@ -850,9 +878,8 @@ class SidecarServer:
                 run_id,
                 {"stopReason": "end_turn"},
             )
-            self.sessions[session_id].status = "idle"
-            self.sessions[session_id].updated_at = datetime.now(timezone.utc).isoformat()
             self.active_runs.pop(run_id, None)
+            self._set_session_status(session_id)
         except Exception:
             await self._emit_event(
                 ws,
@@ -861,7 +888,8 @@ class SidecarServer:
                 run_id,
                 {"message": "stream failure"},
             )
-            self.sessions[session_id].status = "error"
+            self.active_runs.pop(run_id, None)
+            self._set_session_status(session_id, "error")
 
     async def _handle_notification(self, req: Dict[str, Any]) -> None:
         _ = req

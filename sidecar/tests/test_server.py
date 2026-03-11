@@ -41,3 +41,24 @@ async def test_session_lifecycle():
         {"method": "prompt.cancel", "params": {"sessionId": sid, "runId": accepted["runId"]}}
     )
     assert cancelled["cancelled"] is True
+
+
+@pytest.mark.asyncio
+async def test_session_delete_removes_session_from_list():
+    s = SidecarServer()
+
+    created = await s.dispatch(
+        {
+            "method": "session.create",
+            "params": {"workspacePath": "/tmp/proj", "title": "Delete Me"},
+        }
+    )
+    sid = created["sessionId"]
+
+    deleted = await s.dispatch(
+        {"method": "session.delete", "params": {"sessionId": sid}}
+    )
+    assert deleted["deleted"] is True
+
+    listed = await s.dispatch({"method": "session.list", "params": {}})
+    assert all(session["sessionId"] != sid for session in listed["sessions"])

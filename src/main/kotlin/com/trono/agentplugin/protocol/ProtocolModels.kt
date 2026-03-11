@@ -32,6 +32,8 @@ data class CreateSessionReq(
 )
 
 data class CreateSessionRes(val sessionId: String, val status: String)
+data class DeleteSessionReq(val sessionId: String)
+data class DeleteSessionRes(val deleted: Boolean)
 
 data class SessionInfo(
     val sessionId: String,

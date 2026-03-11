@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicLong
 interface SidecarClient {
     suspend fun initialize(req: InitializeReq): InitializeRes
     suspend fun createSession(req: CreateSessionReq): CreateSessionRes
+    suspend fun deleteSession(req: DeleteSessionReq): DeleteSessionRes
     suspend fun listSessions(): ListSessionsRes
     suspend fun sendPrompt(req: PromptReq): PromptAccepted
     suspend fun cancelPrompt(req: CancelReq): CancelRes
@@ -98,6 +99,11 @@ class WsSidecarClient(
     override suspend fun createSession(req: CreateSessionReq): CreateSessionRes {
         val res = rpc("session.create", req)
         return gson.fromJson(res, CreateSessionRes::class.java)
+    }
+
+    override suspend fun deleteSession(req: DeleteSessionReq): DeleteSessionRes {
+        val res = rpc("session.delete", req)
+        return gson.fromJson(res, DeleteSessionRes::class.java)
     }
 
     override suspend fun listSessions(): ListSessionsRes {
@@ -209,6 +215,12 @@ class StubSidecarClient : SidecarClient {
         )
         defaultSession = s
         return CreateSessionRes(s.sessionId, s.status)
+    }
+
+    override suspend fun deleteSession(req: DeleteSessionReq): DeleteSessionRes {
+        val deleted = defaultSession?.sessionId == req.sessionId
+        if (deleted) defaultSession = null
+        return DeleteSessionRes(deleted)
     }
 
     override suspend fun listSessions(): ListSessionsRes =
