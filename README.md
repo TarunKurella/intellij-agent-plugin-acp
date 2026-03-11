@@ -1,30 +1,35 @@
-# Intelli Agent Plugin (IntelliJ + Python Claude Sidecar)
+# Intelli Agent Plugin
 
-An ACP-inspired IntelliJ plugin prototype that integrates Claude Agent SDK through a local Python sidecar, with IntelliJ-aware tools for code context, search, patch preview/commit, and safe command execution.
+Intelli Agent is an IntelliJ plugin prototype that connects a local IntelliJ UI to Claude through a Python sidecar. It provides session-based chat, streamed tool transparency, native IntelliJ diff review, and guarded patch application for code-editing workflows inside the IDE.
 
-## Current Status
+For a higher-level explanation of the project, behavior, and architecture, see [PROJECT_OVERVIEW.md](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/PROJECT_OVERVIEW.md).
 
-This repository contains an active prototype with:
+## What It Does
 
-- IntelliJ plugin (Kotlin) tool window
-- Python sidecar (WebSocket JSON-RPC)
-- Session-based prompting + streaming
-- MCP-based Intelli tools exposed to Claude
-- Patch preview/commit + rollback flow
-- Native IntelliJ diff preview integration
-- Safety policies for command execution
-- Sidecar test suite
+- Runs an IntelliJ tool window with a JCEF-based agent chat UI
+- Streams assistant text and tool activity over WebSocket JSON-RPC
+- Exposes IntelliJ-aware tools to Claude through an MCP-backed Python sidecar
+- Creates patch previews and opens native IntelliJ diff review before apply
+- Supports multiple sessions with per-session run state in the sidebar
+- Allows real session deletion from the running sidecar
 
-## Architecture
+## Current Architecture
 
-- **Frontend shell:** IntelliJ plugin (Kotlin/Swing, moving toward richer UX)
-- **Agent backend:** Python sidecar (`sidecar/server.py`)
-- **Transport:** WebSocket JSON-RPC (`ws://127.0.0.1:8765`)
-- **LLM runtime:** `claude-agent-sdk`
+- IntelliJ plugin frontend: Kotlin + JCEF tool window
+- IDE bridge: Kotlin RPC client and JS bridge
+- Sidecar backend: Python WebSocket JSON-RPC server
+- Agent runtime: `claude_agent_sdk`
+- Transport: local WebSocket on `ws://127.0.0.1:8765`
 
-## Implemented Tool Surface
+## Main Components
 
-Core tools currently wired in sidecar:
+- Plugin UI: [AgentWebViewPanel.kt](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/src/main/kotlin/com/trono/agentplugin/toolwindow/AgentWebViewPanel.kt)
+- Tool window registration: [AgentToolWindowFactory.kt](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/src/main/kotlin/com/trono/agentplugin/toolwindow/AgentToolWindowFactory.kt)
+- Protocol models: [ProtocolModels.kt](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/src/main/kotlin/com/trono/agentplugin/protocol/ProtocolModels.kt)
+- WebSocket sidecar client: [SidecarClient.kt](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/src/main/kotlin/com/trono/agentplugin/protocol/SidecarClient.kt)
+- Python sidecar: [server.py](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/sidecar/server.py)
+
+## Implemented Sidecar Tool Surface
 
 - `ide.get_current_file`
 - `ide.get_selection`
@@ -33,20 +38,27 @@ Core tools currently wired in sidecar:
 - `ide.find_files`
 - `ide.search_text`
 - `ide.run_test`
-- `ide.run_command` (allowlist/blocklist policy)
+- `ide.run_command`
 - `ide.apply_patch_preview`
 - `ide.apply_patch_commit`
 - `ide.patch_rollback`
 - `ide.patch_preview_get`
 - `ide.patch_preview_last`
-- Deep tools phase-1:
-  - `ide.get_symbol_at_cursor`
-  - `ide.find_usages`
-  - `ide.get_diagnostics`
+- `ide.get_symbol_at_cursor`
+- `ide.find_usages`
+- `ide.get_diagnostics`
+
+## UX Behavior
+
+- Chat messages are session-scoped and streamed by `sessionId` and `runId`
+- Tool calls are rendered as visible timeline rows in the chat UI
+- Patch previews stay in chat as trigger cards until the user opens the native diff
+- Patch apply/reject happens through the native diff approval bar
+- Session rail lights reflect idle, running, waiting, and error states
 
 ## Setup
 
-### 1) Sidecar
+### Sidecar
 
 ```bash
 cd sidecar
@@ -57,24 +69,59 @@ export ANTHROPIC_API_KEY=YOUR_KEY
 python server.py
 ```
 
-Live Claude mode is default. To force simulated mode:
+To force simulated mode:
 
 ```bash
 export INTELLI_AGENT_USE_CLAUDE=0
 ```
 
-### 2) IntelliJ plugin
+### Plugin
 
 ```bash
-cd ..
 ./gradlew runIde
 ```
 
-> Requires JDK 17.
+Requires JDK 17.
+
+## Build / Export
+
+Compile:
+
+```bash
+./gradlew compileKotlin
+```
+
+Build plugin ZIP:
+
+```bash
+./gradlew buildPlugin
+```
+
+If another IntelliJ instance prevents searchable options generation, this variant still produces the distributable ZIP:
+
+```bash
+./gradlew buildPlugin -x buildSearchableOptions
+```
+
+Current exported artifact path:
+
+- [intellij-agent-plugin-0.1.0.zip](/Users/tarun-agentic/.openclaw/workspace/intellij-agent-plugin/build/distributions/intellij-agent-plugin-0.1.0.zip)
 
 ## Testing
 
-Run sidecar tests:
+Kotlin compile check:
+
+```bash
+./gradlew compileKotlin
+```
+
+Python sidecar syntax check:
+
+```bash
+python3 -m py_compile sidecar/server.py
+```
+
+Python tests require `pytest` in the active Python environment:
 
 ```bash
 cd sidecar
@@ -82,26 +129,9 @@ source .venv/bin/activate
 pytest -q
 ```
 
-Current suite includes lifecycle, streaming, cancel, command safety, patch safety/rollback, deep tools, and end-to-end flow.
+## Notes
 
-## Notable Design/Behavior Notes
-
-- Patch previews may be applicable (`oldText/newText`) or diff-only.
-- Commit now returns explicit reasons when preview cannot be auto-applied.
-- Native diff view opens from preview metadata.
-- Session context includes workspace/current file/selection metadata in prompt prefix.
-
-## Next Planned Work
-
-- UI modernization (likely JCEF/React hybrid)
-- Better action affordances for patch approve/reject
-- Stream dedupe + stronger role rendering
-- Rich markdown rendering in chat timeline
-
-## Repository Hygiene
-
-Ignored from source control:
-
-- `.gradle/`, `build/`
-- sidecar virtualenv/cache
-- IDE and OS artifacts
+- Sessions currently live in sidecar memory, not durable storage.
+- Deleting a session removes it from the running sidecar state.
+- Patch commit supports exact and normalized-text fallback matching.
+- Command execution is intentionally allowlisted in the prototype.
